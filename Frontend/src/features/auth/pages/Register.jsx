@@ -8,13 +8,25 @@ const Register = () => {
     const [ username, setUsername ] = useState("")
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
+    const [ error, setError ] = useState("")
+    const [ isRegistering, setIsRegistering ] = useState(false)
 
     const {loading,handleRegister} = useAuth()
     
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleRegister({username,email,password})
-        navigate("/")
+        setError("")
+        setIsRegistering(true)
+        try {
+            const success = await handleRegister({username,email,password})
+            if (success) {
+                navigate("/")
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "Registration failed. Please try again.")
+        } finally {
+            setIsRegistering(false)
+        }
     }
 
     if(loading){
@@ -25,6 +37,11 @@ const Register = () => {
         <main>
             <div className="form-container">
                 <h1>Register</h1>
+                {error && (
+                    <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px' }}>
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
 
@@ -47,7 +64,9 @@ const Register = () => {
                             type="password" id="password" name='password' placeholder='Enter password' />
                     </div>
 
-                    <button className='button primary-button' >Register</button>
+                    <button className='button primary-button' disabled={isRegistering} style={{ opacity: isRegistering ? 0.6 : 1 }}>
+                        {isRegistering ? "Registering..." : "Register"}
+                    </button>
 
                 </form>
 

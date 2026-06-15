@@ -8,14 +8,42 @@ const Home = () => {
     const { loading, generateReport,reports } = useInterview()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
+    const [ error, setError ] = useState("")
+    const [ uploadedResume, setUploadedResume ] = useState(null)
     const resumeInputRef = useRef()
+    const [ isGenerating, setIsGenerating ] = useState(false)
 
     const navigate = useNavigate()
 
+    const handleResumeChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setUploadedResume(file)
+        }
+    }
+
     const handleGenerateReport = async () => {
-        const resumeFile = resumeInputRef.current.files[ 0 ]
-        const data = await generateReport({ jobDescription, selfDescription, resumeFile })
-        navigate(`/interview/${data._id}`)
+        if (isGenerating) return
+        setIsGenerating(true)
+        setError("")
+        try {
+            const resumeFile = resumeInputRef.current.files[ 0 ]
+            if (!jobDescription.trim()) {
+                setError("Please provide a job description")
+                return
+            }
+            if (!selfDescription.trim() && !resumeFile) {
+                setError("Please provide either a resume or a self description")
+                return
+            }
+            const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+            navigate(`/interview/${data._id}`)
+        } catch (err) {
+            console.error(err)
+            setError(err.response?.data?.message || err.message || "An error occurred")
+        } finally {
+            setIsGenerating(false)
+        }
     }
 
     if (loading) {
@@ -75,14 +103,33 @@ const Home = () => {
                                 Upload Resume
                                 <span className='badge badge--best'>Best Results</span>
                             </label>
-                            <label className='dropzone' htmlFor='resume'>
-                                <span className='dropzone__icon'>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
-                                </span>
-                                <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
-                            </label>
+                            {uploadedResume ? (
+                                <div style={{
+                                    padding: '16px',
+                                    backgroundColor: '#f0fdf4',
+                                    border: '2px solid #22c55e',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    cursor: 'pointer'
+                                }} onClick={() => resumeInputRef.current.click()}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="11" x2="15" y2="11"></line><polyline points="9 19 15 19"></polyline></svg>
+                                    <div>
+                                        <p style={{ fontWeight: 600, color: '#166534', margin: 0 }}>{uploadedResume.name}</p>
+                                        <p style={{ fontSize: '12px', color: '#15803d', margin: 0 }}>{(uploadedResume.size / 1024).toFixed(1)} KB - Click to change</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <label className='dropzone' htmlFor='resume'>
+                                    <span className='dropzone__icon'>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
+                                    </span>
+                                    <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
+                                    <p className='dropzone__subtitle'>PDF or DOCX (Max 10MB)</p>
+                                </label>
+                            )}
+                            <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' onChange={handleResumeChange} />
                         </div>
 
                         {/* OR Divider */}
@@ -110,14 +157,37 @@ const Home = () => {
                     </div>
                 </div>
 
+                {error && (
+                    <div style={{
+                        backgroundColor: '#fee2e2',
+                        color: '#991b1b',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        marginBottom: '16px'
+                    }}>
+                        {error}
+                    </div>
+                )}
                 {/* Card Footer */}
                 <div className='interview-card__footer'>
                     <span className='footer-info'>AI-Powered Strategy Generation &bull; Approx 30s</span>
                     <button
                         onClick={handleGenerateReport}
-                        className='generate-btn'>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
-                        Generate My Interview Strategy
+                        disabled={isGenerating || loading}
+                        className='generate-btn'
+                        style={{ opacity: isGenerating || loading ? 0.6 : 1, cursor: isGenerating || loading ? 'not-allowed' : 'pointer' }}
+                    >
+                        {isGenerating || loading ? (
+                            <>
+                                <svg style={{ animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                                Generating...
+                            </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
+                                Generate My Interview Strategy
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

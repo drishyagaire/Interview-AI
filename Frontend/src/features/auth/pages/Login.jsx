@@ -10,11 +10,23 @@ const Login = () => {
 
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
+    const [ error, setError ] = useState("")
+    const [ isLoggingIn, setIsLoggingIn ] = useState(false)
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleLogin({email,password})
-        navigate('/')
+        setError("")
+        setIsLoggingIn(true)
+        try {
+            const success = await handleLogin({email,password})
+            if (success) {
+                navigate('/')
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "Login failed. Please check your credentials.")
+        } finally {
+            setIsLoggingIn(false)
+        }
     }
 
     if(loading){
@@ -26,6 +38,11 @@ const Login = () => {
         <main>
             <div className="form-container">
                 <h1>Login</h1>
+                {error && (
+                    <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px' }}>
+                        {error}
+                    </div>
+                )}
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
                         <label htmlFor="email">Email</label>
@@ -39,7 +56,9 @@ const Login = () => {
                             onChange={(e) => { setPassword(e.target.value) }}
                             type="password" id="password" name='password' placeholder='Enter password' />
                     </div>
-                    <button className='button primary-button' >Login</button>
+                    <button className='button primary-button' disabled={isLoggingIn} style={{ opacity: isLoggingIn ? 0.6 : 1 }}>
+                        {isLoggingIn ? "Logging in..." : "Login"}
+                    </button>
                 </form>
                 <p>Don't have an account? <Link to={"/register"} >Register</Link> </p>
             </div>
