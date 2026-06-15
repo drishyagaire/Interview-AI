@@ -1,9 +1,9 @@
- const { GoogleGenAI } = require("@google/genai")
+const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const puppeteer = require("puppeteer")
 
 const USE_MOCK_MODE = false // Set to true to skip API calls entirely
+const DISABLE_PUPPETEER = true // Disable PDF generation for Vercel compatibility
 
 if (!process.env.GOOGLE_GENAI_API_KEY && !USE_MOCK_MODE) {
     console.error("ERROR: GOOGLE_GENAI_API_KEY is not set in .env file!")
@@ -106,29 +106,6 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         console.log("Falling back to mock data due to API failure")
         return getMockInterviewReport(jobDescription)
     }
-
-
-}
-
-
-
-async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch()
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
-
-    const pdfBuffer = await page.pdf({
-        format: "A4", margin: {
-            top: "20mm",
-            bottom: "20mm",
-            left: "15mm",
-            right: "15mm"
-        }
-    })
-
-    await browser.close()
-
-    return pdfBuffer
 }
 
 function getMockResumeHtml() {
@@ -164,9 +141,38 @@ function getMockResumeHtml() {
 </html>`
 }
 
+async function generatePdfFromHtml(htmlContent) {
+    if (DISABLE_PUPPETEER) {
+        // Return a simple buffer that says PDF generation is disabled
+        return Buffer.from("PDF generation is temporarily disabled for Vercel deployment.")
+    }
+    
+    try {
+        const puppeteer = require("puppeteer")
+        const browser = await puppeteer.launch()
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" })
+
+        const pdfBuffer = await page.pdf({
+            format: "A4", margin: {
+                top: "20mm",
+                bottom: "20mm",
+                left: "15mm",
+                right: "15mm"
+            }
+        })
+
+        await browser.close()
+        return pdfBuffer
+    } catch (error) {
+        console.error("Error with Puppeteer PDF generation:", error)
+        return Buffer.from("PDF generation failed. Please try again later.")
+    }
+}
+
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
-    if (USE_MOCK_MODE) {
-        console.log("Using mock mode - returning sample resume PDF")
+    if (USE_MOCK_MODE || DISABLE_PUPPETEER) {
+        console.log("Using mock mode or Puppeteer disabled - returning sample resume PDF")
         return await generatePdfFromHtml(getMockResumeHtml())
     }
 
@@ -196,7 +202,6 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                 responseSchema: zodToJsonSchema(resumePdfSchema),
             }
         })
-
 
         const jsonContent = JSON.parse(response.text)
         const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
