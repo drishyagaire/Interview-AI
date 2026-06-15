@@ -1,19 +1,21 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" },
-    {
-      "src": "Frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "Frontend/dist" }
+  "buildCommand": "cd Frontend && npm install && npm run build && cd ..",
+  "outputDirectory": "Frontend/dist",
+  "framework": "vite",
+  "functions": {
+    "api/index.js": {
+      "runtime": "@vercel/node@3"
     }
-  ],
+  },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.js" },
     {
-      "src": "^/(assets|.*\\.js|.*\\.css|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.ico)",
-      "dest": "/Frontend/dist/$0"
+      "src": "/api/(.*)",
+      "dest": "api/index.js"
     },
-    { "src": "/(.*)", "dest": "/Frontend/dist/index.html" }
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
   ]
 }

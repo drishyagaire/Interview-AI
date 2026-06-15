@@ -1,0 +1,20 @@
+{
+  "name": "resumee",
+  "version": "1.0.0",
+  "description": "AI Interview Prep Platform",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "cd Backend && npm run dev",
+    "dev:frontend": "cd Frontend && npm run dev",
+    "build:frontend": "cd Frontend && npm run build",
+    "build": "npm run build:frontend"
+  },
+  "workspaces": [
+    "Backend",
+    "Frontend"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
